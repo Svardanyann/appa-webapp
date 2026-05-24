@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ԱՊՊԱ Լուսանկարների Բեռնում</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #222222);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        h2 {
+            margin-bottom: 10px;
+            font-size: 20px;
+            color: var(--tg-theme-text-color, #222222);
+        }
+
+        p {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color, #777777);
+            margin-bottom: 25px;
+        }
+
+        /* Թաքցնում ենք ստանդարտ input-ը */
+        #file-input {
+            display: none;
+        }
+
+        /* Գեղեցիկ կոճակ նկար ընտրելու համար */
+        .upload-btn {
+            display: inline-block;
+            background-color: var(--tg-theme-button-color, #2481cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .upload-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Նկարների նախադիտման բլոկ */
+        .preview-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        .preview-item {
+            position: relative;
+            width: 100%;
+            padding-top: 100%; /* Քառակուսի տեսքի համար */
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: rgba(0,0,0,0.05);
+            border: 1px solid var(--tg-theme-hint-color, #ccc);
+        }
+
+        .preview-item img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Ջնջելու կոճակ ամեն նկարի վրա */
+        .delete-btn {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            background-color: rgba(255, 0, 0, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Կցել Լուսանկարներ</h2>
+    <p>Ընտրեք ԱՊՊԱ-ի համար անհրաժեշտ բոլոր լուսանկարները (մեկ կամ մի քանի):</p>
+
+    <label for="file-input" class="upload-btn">
+        ➕ Ավելացնել Լուսանկարներ
+    </label>
+    <input type="input" id="file-input" type="file" accept="image/*" multiple>
+
+    <div class="preview-container" id="preview-container"></div>
+</div>
+
+<script>
+    // Ինիցիալիզացնում ենք Telegram WebApp-ը
+    const tg = window.Telegram.WebApp;
+    tg.expand(); // Բացում ենք պատուհանը ամբողջ էկրանով
+
+    // Ակտիվացնում ենք Telegram-ի ներքևի գլխավոր "Main Button"-ը
+    tg.MainButton.setText("🔄 Ուղարկել Բոտին");
+    tg.MainButton.hide(); // Սկզբից թաքցնում ենք, մինչև նկար չընտրվի
+
+    const fileInput = document.getElementById('file-input');
+    const previewContainer = document.getElementById('preview-container');
+    
+    // Մասիվ՝ նկարների ֆայլերը պահելու համար
+    let selectedFiles = [];
+
+    fileInput.addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        
+        files.forEach(file => {
+            selectedFiles.push(file);
+            
+            // Ստեղծում ենք նկարի տեսողական պատկերը (preview)
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const previewItem = document.createElement('div');
+                previewItem.className = 'preview-item';
+                
+                const img = document.createElement('img');
+                img.src = event.target.result;
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.innerHTML = 'X';
+                
+                // Ջնջելու տրամաբանությունը
+                deleteBtn.addEventListener('click', () => {
+                    previewItem.remove();
+                    selectedFiles = selectedFiles.filter(f => f !== file);
+                    if(selectedFiles.length === 0) {
+                        tg.MainButton.hide();
+                    }
+                });
+                
+                previewItem.appendChild(img);
+                previewItem.appendChild(deleteBtn);
+                previewContainer.appendChild(previewItem);
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Եթե կան ընտրված նկարներ, ցույց ենք տալիս Telegram-ի գլխավոր կոճակը
+        if (selectedFiles.length > 0) {
+            tg.MainButton.show();
+        }
+    });
+
+    // Երբ օգտատերը սեղմում է Telegram-ի ներքևի մեծ կոճակը՝ "Ուղարկել Բոտին"
+    tg.MainButton.onClick(() => {
+        tg.MainButton.showProgress(); // Միացնում ենք loading անիմացիան
+        
+        // Քանի որ ն
